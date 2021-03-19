@@ -121,6 +121,11 @@ func (w *wsApp) Run() {
 	config := rest_client.NewConfig()
 	w.rest_client = rest_client.NewRestClient(config)
 	for i := 0; i < w.config.sessions; i++ {
+
+		if i%100 == 0 {
+			fmt.Printf("...%d", i)
+		}
+
 		time.Sleep(time.Duration(w.config.create_user_timeout) * time.Millisecond)
 		user := user.NewUser()
 		w.CreateToken(user)

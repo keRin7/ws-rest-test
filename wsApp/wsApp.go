@@ -74,6 +74,7 @@ func (w *wsApp) CreateToken(user *user.User) {
 	confirmJSONobj := confirmJSONw{}
 	jsonErr := json.Unmarshal(bodyConfirm, &confirmJSONobj)
 	if jsonErr != nil {
+		log.Println("CreateToken:unmarshal: ")
 		log.Fatal(jsonErr)
 	}
 	//fmt.Println(confirmJSONobj.Auth.Access.Token)
@@ -107,7 +108,7 @@ func (w *wsApp) SetOnlineStatus(user *user.User) {
 }
 
 func (w *wsApp) RunUser(user *user.User) {
-	w.CreateToken(user)
+
 	//fmt.Println(user.GetToken())
 	w.SetName(user, "TEST")
 	w.GetResources(user)
@@ -117,13 +118,14 @@ func (w *wsApp) RunUser(user *user.User) {
 
 func (w *wsApp) Run() {
 	users := make([]*user.User, 0, w.config.sessions)
-	for i := 0; i < w.config.sessions; i++ {
-		time.Sleep(time.Duration(30) * time.Millisecond)
-		user := user.NewUser()
-		users = append(users, user)
-	}
 	config := rest_client.NewConfig()
 	w.rest_client = rest_client.NewRestClient(config)
+	for i := 0; i < w.config.sessions; i++ {
+		time.Sleep(time.Duration(w.config.create_user_timeout) * time.Millisecond)
+		user := user.NewUser()
+		w.CreateToken(user)
+		users = append(users, user)
+	}
 	fmt.Println("Start test:")
 	for _, userA := range users {
 		go w.RunUser(userA)

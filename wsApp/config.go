@@ -9,7 +9,7 @@ import (
 type config struct {
 	sessions              int
 	secret                string
-	conn_timeout          int
+	create_user_timeout   int
 	wait_end_work_timeout int
 	//wsConfig *ws.Config
 }
@@ -31,13 +31,13 @@ func NewConfig() *config {
 	if err != nil {
 		log.Fatalf("Variable SESSIONS has wrong format")
 	}
-	conn_timeout, exists := os.LookupEnv("CONN_TIMEOUT")
+	create_user_timeout, exists := os.LookupEnv("CREATE_USER_TIMEOUT")
 	if !exists {
-		log.Fatalf("Variable CONN_TIMEOUT is unknown")
+		log.Fatalf("Variable CREATE_USER_TIMEOUT is unknown")
 	}
-	c.conn_timeout, err = strconv.Atoi(conn_timeout)
+	c.create_user_timeout, err = strconv.Atoi(create_user_timeout)
 	if err != nil {
-		log.Fatalf("Variable SESSIONS has wrong format")
+		log.Fatalf("Variable CREATE_USER_TIMEOUT has wrong format")
 	}
 	wait_end_work_timeout, exists := os.LookupEnv("WAIT_END_WORK_TIMEOUT")
 	if !exists {

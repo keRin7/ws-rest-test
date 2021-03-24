@@ -37,7 +37,7 @@ func (r *Rest_client) DoGet(path string, headers map[string]string) []byte {
 	defer resp.Body.Close()
 
 	if (resp.Status != "200 OK") && (resp.Status != "201 Created") {
-		log.Println("GET:", resp.Status)
+		log.Println("GET:", resp.Status, " path: ", path)
 	} else {
 
 		body, err := ioutil.ReadAll(resp.Body)
@@ -89,7 +89,7 @@ func (r *Rest_client) DoPost(path string, body []byte, headers map[string]string
 	//fmt.Println(resp.Status)
 
 	if (resp.Status != "200 OK") && (resp.Status != "201 Created") {
-		log.Println("POST:", resp.Status)
+		log.Println("POST:", resp.Status, " path: ", path)
 	} else {
 
 		bodyResp, err := ioutil.ReadAll(resp.Body)
@@ -123,7 +123,7 @@ func (r *Rest_client) DoPatch(path string, body []byte, headers map[string]strin
 	defer resp.Body.Close()
 
 	if (resp.Status != "200 OK") && (resp.Status != "201 Created") {
-		log.Println("PATCH:", resp.Status)
+		log.Println("PATCH:", resp.Status, " path: ", path)
 	} else {
 
 		bodyResp, err := ioutil.ReadAll(resp.Body)
@@ -163,7 +163,7 @@ func (r *Rest_client) DoPut(path string, body io.Reader, headers map[string]stri
 	defer resp.Body.Close()
 
 	if (resp.Status != "200 OK") && (resp.Status != "201 Created") {
-		log.Println("PATCH:", resp.Status)
+		log.Println("PATCH:", resp.Status, " path: ", path)
 	} else {
 
 		bodyResp, err := ioutil.ReadAll(resp.Body)

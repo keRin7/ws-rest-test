@@ -261,11 +261,13 @@ func (w *wsApp) Run() {
 		}
 
 		user1 := user.NewUser()
-		w.CreateToken(user1)
 		time.Sleep(time.Duration(w.config.create_user_timeout) * time.Millisecond)
+		w.CreateToken(user1)
 		user2 := user.NewUser()
+		time.Sleep(time.Duration(w.config.create_user_timeout) * time.Millisecond)
 		w.CreateToken(user2)
 		users = append(users, &pairUsers{user1, user2})
+
 	}
 	fmt.Println("Start test:")
 	for _, users := range users {

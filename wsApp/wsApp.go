@@ -237,7 +237,8 @@ func (w *wsApp) RunUser(users *pairUsers, ctx context.Context) {
 			if w.config.run_video_test == 1 {
 				time.Sleep(time.Duration(w.config.video_test_timeout) * time.Millisecond)
 				url := w.CreateMediaLink(users.user1)
-				w.UploadVideo(url, w.config.path_video_file)
+				w.UploadVideo(url.MediaUrl, w.config.path_video_file)
+				w.UploadImage(url.PreviewUrl, w.config.path_image_preview_file)
 			}
 		}
 	}

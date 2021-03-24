@@ -7,13 +7,14 @@ import (
 )
 
 type config struct {
-	sessions             int
-	create_user_timeout  int
-	run_video_test       int
-	video_test_timeout   int
-	run_message_test     int
-	message_test_timeout int
-	path_video_file      string
+	sessions                int
+	create_user_timeout     int
+	run_video_test          int
+	video_test_timeout      int
+	run_message_test        int
+	message_test_timeout    int
+	path_video_file         string
+	path_image_preview_file string
 	//wsConfig *ws.Config
 }
 
@@ -71,6 +72,10 @@ func NewConfig() *config {
 		c.path_video_file, exists = os.LookupEnv("PATH_VIDEO_FILE")
 		if !exists {
 			log.Fatalf("Variable PATH_VIDEO_FILE is unknown")
+		}
+		c.path_image_preview_file, exists = os.LookupEnv("PATH_IMAGE_PREVIEW_FILE")
+		if !exists {
+			log.Fatalf("Variable PATH_IMAGE_PREVIEW_FILE is unknown")
 		}
 
 	}

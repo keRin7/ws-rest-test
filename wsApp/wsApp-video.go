@@ -13,7 +13,7 @@ type MediaLink struct {
 	PreviewUrl string `json:"previewUrl"`
 }
 
-func (w *wsApp) CreateMediaLink(user *user.User) string {
+func (w *wsApp) CreateMediaLink(user *user.User) MediaLink {
 	headers := map[string]string{
 		"Authorization": "Bearer " + user.GetToken(),
 	}
@@ -28,7 +28,7 @@ func (w *wsApp) CreateMediaLink(user *user.User) string {
 	}
 	//fmt.Println(url.MediaUrl)
 
-	return url.MediaUrl
+	return url
 }
 
 func (w *wsApp) UploadVideo(url string, file string) {
@@ -40,6 +40,28 @@ func (w *wsApp) UploadVideo(url string, file string) {
 
 	headers := map[string]string{
 		"Content-Type": "video/mp4",
+	}
+	//fmt.Println(url)
+	w.rest_client.DoPut(url, data, headers)
+	//fmt.Println(string(out))
+
+	//url := MediaLink{}
+	//err := json.Unmarshal(out, &url)
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//fmt.Println(url.MediaUrl)
+}
+
+func (w *wsApp) UploadImage(url string, file string) {
+	data, err := os.Open(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer data.Close()
+
+	headers := map[string]string{
+		"Content-Type": "image/jpeg",
 	}
 	//fmt.Println(url)
 	w.rest_client.DoPut(url, data, headers)

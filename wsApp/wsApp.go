@@ -93,6 +93,7 @@ func (w *wsApp) CreateToken(user *user.User) {
 func (w *wsApp) SetName(user *user.User, name string) {
 	headers := map[string]string{
 		"Authorization": "Bearer " + user.GetToken(),
+		"Content-Type":  "application/json",
 	}
 	body := `{
 		"name": "` + name + `"
@@ -146,6 +147,7 @@ func (w *wsApp) PutInfo(user *user.User, name string, age string) {
 	  }`
 	headers := map[string]string{
 		"Authorization": "Bearer " + user.GetToken(),
+		"Content-Type":  "application/json",
 	}
 
 	w.rest_client.DoPut(w.rest_client.Config.Url+"/api/v1/profile/props", bytes.NewReader([]byte(body)), headers)

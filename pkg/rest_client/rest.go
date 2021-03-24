@@ -2,19 +2,20 @@ package rest_client
 
 import (
 	"bytes"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 )
 
 type Rest_client struct {
-	config     *Config
+	Config     *Config
 	httpClient *http.Client
 }
 
 func NewRestClient(config *Config) *Rest_client {
 	return &Rest_client{
-		config:     config,
+		Config:     config,
 		httpClient: &http.Client{},
 	}
 }
@@ -22,7 +23,7 @@ func NewRestClient(config *Config) *Rest_client {
 func (r *Rest_client) DoGet(path string, headers map[string]string) []byte {
 
 	//client := &http.Client{}
-	req, err := http.NewRequest(http.MethodGet, r.config.url+path, nil)
+	req, err := http.NewRequest(http.MethodGet, path, nil)
 
 	for k, v := range headers {
 		//fmt.Printf("%s %s", k, v)
@@ -35,13 +36,18 @@ func (r *Rest_client) DoGet(path string, headers map[string]string) []byte {
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("DoGet:ReadAll: %s", path)
-		log.Fatal(err)
-	}
+	if (resp.Status != "200 OK") && (resp.Status != "201 Created") {
+		log.Println("GET:", resp.Status)
+	} else {
 
-	return body
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("DoGet:ReadAll: %s", path)
+			log.Fatal(err)
+		}
+		return body
+	}
+	return nil
 	/* for true {
 
 		bs := make([]byte, 1014)
@@ -54,30 +60,56 @@ func (r *Rest_client) DoGet(path string, headers map[string]string) []byte {
 	} */
 }
 
-func (r *Rest_client) DoPost(path string, b []byte) []byte {
-	p := bytes.NewReader(b)
-	resp, err := http.Post(r.config.url+path, "application/json", p)
+func (r *Rest_client) DoPost(path string, body []byte, headers map[string]string) []byte {
+	p := bytes.NewReader(body)
+	/* resp, err := http.Post(r.config.url+path, "application/json", p)
+	if err != nil {
+		log.Printf("DoPost: %s", path)
+		log.Fatal(err)
+	} */
+
+	//fmt.Println(r.config.url + path)
+	req, err := http.NewRequest(http.MethodPost, path, p)
 	if err != nil {
 		log.Printf("DoPost: %s", path)
 		log.Fatal(err)
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("DoPost:ReadAll: %s", path)
-		log.Fatal(err)
+	for k, v := range headers {
+		//fmt.Printf("%s %s", k, v)
+		req.Header.Add(k, v)
 	}
 
-	//fmt.Println(string(body))
+	resp, err := r.httpClient.Do(req)
+	if err != nil {
+		log.Printf("DoPost: %s", path)
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+	//fmt.Println(resp.Status)
 
-	return body
+	if (resp.Status != "200 OK") && (resp.Status != "201 Created") {
+		log.Println("POST:", resp.Status)
+	} else {
+
+		bodyResp, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("DoPost:ReadAll: %s", path)
+			log.Fatal(err)
+		}
+		return bodyResp
+	}
+	return nil
+
+	//fmt.Println(string(resp.Status))
+
 }
 
-func (r *Rest_client) DoPatch(path string, b []byte, headers map[string]string) []byte {
-	p := bytes.NewReader(b)
+func (r *Rest_client) DoPatch(path string, body []byte, headers map[string]string) []byte {
+	p := bytes.NewReader(body)
 	//resp, err := http.
 
-	req, err := http.NewRequest(http.MethodPatch, r.config.url+path, p)
+	req, err := http.NewRequest(http.MethodPatch, path, p)
 
 	for k, v := range headers {
 		//fmt.Printf("%s %s", k, v)
@@ -90,15 +122,20 @@ func (r *Rest_client) DoPatch(path string, b []byte, headers map[string]string) 
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("DoPatch:ReadAll: %s", path)
-		log.Fatal(err)
-	}
+	if (resp.Status != "200 OK") && (resp.Status != "201 Created") {
+		log.Println("PATCH:", resp.Status)
+	} else {
 
+		bodyResp, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("DoPatch:ReadAll: %s", path)
+			log.Fatal(err)
+		}
+		return bodyResp
+	}
+	return nil
 	//fmt.Println(string(body))
 
-	return body
 }
 
 /* data := []byte(`{"foo":"bar"}`)
@@ -107,3 +144,36 @@ resp, err := http.Post("http://example.com/upload", "application/json", r)
 if err != nil {
     return err
 } */
+
+func (r *Rest_client) DoPut(path string, body io.Reader, headers map[string]string) []byte {
+	//p := bytes.NewReader(body)
+	//resp, err := http.
+
+	req, err := http.NewRequest(http.MethodPut, path, body)
+
+	for k, v := range headers {
+		//fmt.Printf("%s %s", k, v)
+		req.Header.Add(k, v)
+	}
+	resp, err := r.httpClient.Do(req)
+	if err != nil {
+		log.Printf("DoPut: %s", path)
+		log.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if (resp.Status != "200 OK") && (resp.Status != "201 Created") {
+		log.Println("PATCH:", resp.Status)
+	} else {
+
+		bodyResp, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("DoPut:ReadAll: %s", path)
+			log.Fatal(err)
+		}
+		return bodyResp
+	}
+	//fmt.Println(string(body))
+	return nil
+
+}

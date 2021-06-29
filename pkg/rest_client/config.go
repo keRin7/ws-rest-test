@@ -1,20 +1,14 @@
 package rest_client
 
-import (
-	"log"
-	"os"
-)
+//import (
+//	"log"
+//	"os"
+//)
 
 type Config struct {
-	Url string
+	Url string `env:"REST_URL"`
 }
 
 func NewConfig() *Config {
-	var c Config
-	var exists bool
-	c.Url, exists = os.LookupEnv("REST_URL")
-	if !exists {
-		log.Fatalf("Variable REST_URL is unknown")
-	}
-	return &c
+	return &Config{}
 }

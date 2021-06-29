@@ -15,3 +15,5 @@
 # vendor/
 
 run.sh
+run-linux.sh
+run

@@ -7,23 +7,27 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"ws-rest-test/pkg/rest_client"
 	"ws-rest-test/pkg/user"
 
 	guuid "github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 )
 
+var jobCounter uint64
+
 type wsApp struct {
-	config      *config
+	Config      *Config
 	rest_client *rest_client.Rest_client
 	ops         uint64
 }
 
-func NewWsApp(config *config) *wsApp {
+func NewWsApp(config *Config) *wsApp {
 	return &wsApp{
-		config: config,
+		Config: config,
 		ops:    0,
 	}
 }
@@ -44,6 +48,22 @@ type confirmJSONw struct {
 
 type chatID struct {
 	Id int64 `json:"id"`
+}
+
+func (w *wsApp) ReportCounter(ctx context.Context) {
+	current := jobCounter
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			{
+				logrus.Println(jobCounter-current, " messages sent in ", w.Config.Report_timeout, "(ms)")
+				current = jobCounter
+				time.Sleep(time.Duration(w.Config.Report_timeout) * time.Millisecond)
+			}
+		}
+	}
 }
 
 func (w *wsApp) CreateToken(user *user.User) {
@@ -73,8 +93,6 @@ func (w *wsApp) CreateToken(user *user.User) {
 	for {
 		bodyConfirm := w.rest_client.DoPost(w.rest_client.Config.Url+"/api/v1/pub/signup/code/confirm", []byte(body), headers)
 
-		//fmt.Println(string(bodyConfirm))
-
 		if bodyConfirm != nil {
 			jsonErr := json.Unmarshal(bodyConfirm, &confirmJSONobj)
 			if jsonErr != nil {
@@ -86,7 +104,6 @@ func (w *wsApp) CreateToken(user *user.User) {
 			time.Sleep(time.Duration(1000) * time.Millisecond)
 		}
 	}
-	//fmt.Println(confirmJSONobj.Auth.Access.Token)
 	user.SetToken(confirmJSONobj.Auth.Access.Token)
 }
 
@@ -106,7 +123,6 @@ func (w *wsApp) GetResources(user *user.User) {
 		"Authorization": "Bearer " + user.GetToken(),
 	}
 	w.rest_client.DoGet(w.rest_client.Config.Url+"/api/v1/pub/gp/resources", headers)
-	//fmt.Println(string(resp))
 }
 
 func (w *wsApp) SetOnlineStatus(user *user.User) {
@@ -114,7 +130,6 @@ func (w *wsApp) SetOnlineStatus(user *user.User) {
 		"Authorization": "Bearer " + user.GetToken(),
 	}
 	w.rest_client.DoGet(w.rest_client.Config.Url+"/api/v1/chats/online", headers)
-	//fmt.Println(string(resp))
 }
 
 func (w *wsApp) GetWSPrivate(user *user.User) {
@@ -122,8 +137,6 @@ func (w *wsApp) GetWSPrivate(user *user.User) {
 		"Authorization": "Bearer " + user.GetToken(),
 	}
 	w.rest_client.DoGet(w.rest_client.Config.Url+"/api/v1/tokens/ws/private", headers)
-	//fmt.Println(string(resp))
-
 }
 
 func (w *wsApp) GetEventState(user *user.User) {
@@ -131,11 +144,9 @@ func (w *wsApp) GetEventState(user *user.User) {
 		"Authorization": "Bearer " + user.GetToken(),
 	}
 	w.rest_client.DoGet(w.rest_client.Config.Url+"/api/v1/events/state", headers)
-	//fmt.Println(string(resp))
 }
 
 func (w *wsApp) PutInfo(user *user.User, name string, age string) {
-	//fmt.Println(user.GetToken())
 	body := `{
 		"age": ` + age + `,
 		"forceUpdate": true,
@@ -151,14 +162,12 @@ func (w *wsApp) PutInfo(user *user.User, name string, age string) {
 	}
 
 	w.rest_client.DoPut(w.rest_client.Config.Url+"/api/v1/profile/props", bytes.NewReader([]byte(body)), headers)
-	//fmt.Println(string(out))
 }
 
 func (w *wsApp) CreateChat(user *user.User, phone string) int64 {
 	headers := map[string]string{
 		"Authorization": "Bearer " + user.GetToken(),
 	}
-	//fmt.Println(phone)
 	chatID := chatID{}
 	for {
 		out := w.rest_client.DoPost(w.rest_client.Config.Url+"/api/v1/chats/by/phone/"+phone, nil, headers)
@@ -174,7 +183,6 @@ func (w *wsApp) CreateChat(user *user.User, phone string) int64 {
 		}
 	}
 
-	//fmt.Println(chatID.Id)
 	return chatID.Id
 }
 
@@ -186,8 +194,6 @@ func (w *wsApp) InstantStatusTyping(user *user.User, chatID string) {
 }
 
 func (w *wsApp) SendMessage(sender *user.User, recipient *user.User, chatID string) {
-	//var out []byte
-	//defer log.Println(string(out))
 
 	message := `{
 		"extId": "` + guuid.New().String() + `",
@@ -204,15 +210,11 @@ func (w *wsApp) SendMessage(sender *user.User, recipient *user.User, chatID stri
 		"Authorization": "Bearer " + sender.GetToken(),
 		"Content-Type":  "application/json",
 	}
-	//fmt.Println(message)
 	w.rest_client.DoPost(w.rest_client.Config.Url+"/api/v1/chats/"+chatID+"/messages", []byte(message), headers)
-	//fmt.Println("Received: " + string(out) + " \n ChatID: " + chatID)
 
 }
 
 func (w *wsApp) RunUser(users *pairUsers, ctx context.Context) {
-	//defer fmt.Println("Finish")
-	//fmt.Println(user.GetToken())
 	w.SetName(users.user1, "TEST123")
 	w.SetName(users.user2, "TEST456")
 	w.GetResources(users.user1)
@@ -230,16 +232,20 @@ func (w *wsApp) RunUser(users *pairUsers, ctx context.Context) {
 		case <-ctx.Done():
 			return
 		default:
-			if w.config.run_message_test == 1 {
-				time.Sleep(time.Duration(w.config.message_test_timeout) * time.Millisecond)
+			if w.Config.Run_message_test == 1 {
+				time.Sleep(time.Duration(w.Config.Message_test_timeout) * time.Millisecond)
 				w.SendMessage(users.user1, users.user2, chatID)
 			}
-			if w.config.run_video_test == 1 {
-				time.Sleep(time.Duration(w.config.video_test_timeout) * time.Millisecond)
+			if w.Config.Run_video_test == 1 {
+				time.Sleep(time.Duration(w.Config.Video_test_timeout) * time.Millisecond)
 				url := w.CreateMediaLink(users.user1)
-				w.UploadVideo(url.MediaUrl, w.config.path_video_file)
-				w.UploadImage(url.PreviewUrl, w.config.path_image_preview_file)
+				w.UploadVideo(url.MediaUrl, w.Config.Path_video_file)
+				w.UploadImage(url.PreviewUrl, w.Config.Path_image_preview_file)
+				if w.Config.Send_video_message_to_chat == 1 {
+					w.MultySendVideo(users.user1, chatID, &url)
+				}
 			}
+			atomic.AddUint64(&jobCounter, 1)
 		}
 	}
 
@@ -251,21 +257,20 @@ type pairUsers struct {
 }
 
 func (w *wsApp) Run() {
-	users := make([]*pairUsers, 0, w.config.sessions)
-	config := rest_client.NewConfig()
-	w.rest_client = rest_client.NewRestClient(config)
+	users := make([]*pairUsers, 0, w.Config.Sessions)
+	w.rest_client = rest_client.NewRestClient(w.Config.Rest_client)
 	ctx, finish := context.WithCancel(context.Background())
-	for i := 0; i < w.config.sessions; i++ {
+	for i := 0; i < w.Config.Sessions; i++ {
 
 		if i%100 == 0 {
 			log.Printf("...%d", i)
 		}
 
 		user1 := user.NewUser()
-		time.Sleep(time.Duration(w.config.create_user_timeout) * time.Millisecond)
+		time.Sleep(time.Duration(w.Config.Create_user_timeout) * time.Millisecond)
 		w.CreateToken(user1)
 		user2 := user.NewUser()
-		time.Sleep(time.Duration(w.config.create_user_timeout) * time.Millisecond)
+		time.Sleep(time.Duration(w.Config.Create_user_timeout) * time.Millisecond)
 		w.CreateToken(user2)
 		users = append(users, &pairUsers{user1, user2})
 
@@ -274,18 +279,7 @@ func (w *wsApp) Run() {
 	for _, users := range users {
 		go w.RunUser(users, ctx)
 	}
-
-	//go func(ctx context.Context) {
-	//	for {
-	//		select {
-	//		case <-ctx.Done():
-	//			return
-	//		default:
-	//			time.Sleep(time.Duration(2000) * time.Millisecond)
-	//			log.Println(runtime.NumGoroutine())
-	//		}
-	//	}
-	//}(ctx)
+	go w.ReportCounter(ctx)
 
 	fmt.Scanln()
 	finish()

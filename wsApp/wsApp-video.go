@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"strconv"
 	"ws-rest-test/pkg/user"
+
+	guuid "github.com/google/uuid"
 )
 
 type MediaLink struct {
@@ -41,16 +44,7 @@ func (w *wsApp) UploadVideo(url string, file string) {
 	headers := map[string]string{
 		"Content-Type": "video/mp4",
 	}
-	//fmt.Println(url)
 	w.rest_client.DoPut(url, data, headers)
-	//fmt.Println(string(out))
-
-	//url := MediaLink{}
-	//err := json.Unmarshal(out, &url)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//fmt.Println(url.MediaUrl)
 }
 
 func (w *wsApp) UploadImage(url string, file string) {
@@ -63,14 +57,30 @@ func (w *wsApp) UploadImage(url string, file string) {
 	headers := map[string]string{
 		"Content-Type": "image/jpeg",
 	}
-	//fmt.Println(url)
 	w.rest_client.DoPut(url, data, headers)
-	//fmt.Println(string(out))
+}
 
-	//url := MediaLink{}
-	//err := json.Unmarshal(out, &url)
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//fmt.Println(url.MediaUrl)
+// Send video link into shared chat
+func (w *wsApp) MultySendVideo(user *user.User, chatID string, link *MediaLink) {
+
+	body := `{
+		"extId": "` + guuid.New().String() + `",
+		"item": "0",
+		"mediaId": "` + strconv.FormatInt(link.Id, 10) + `",
+		"lifeCycle": {
+		  "secondsAfterPlay": 86400
+		},
+		"locale": "RU",
+		"recorded": "2021-03-22T13:50:23.333Z",
+		"text": "Video Message By User1, 0 part"
+	  }`
+
+	headers := map[string]string{
+		"Authorization": "Bearer " + user.GetToken(),
+		"Content-Type":  "application/json",
+	}
+	//fmt.Println(message)
+	w.rest_client.DoPost(w.rest_client.Config.Url+"/api/v1/chats/"+chatID+"/messages", []byte(body), headers)
+	//fmt.Println("Received: " + string(out) + " \n ChatID: " + chatID)
+
 }
